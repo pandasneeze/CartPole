@@ -211,12 +211,14 @@ def optimize_model():
 num_episodes = 300
 for i_episode in range(num_episodes):
     # gymnasium reset()은 (observation, info) 반환
+    # env, state 초기화
     env.reset()
     last_screen = get_screen()
     current_screen = get_screen()
     state = current_screen - last_screen
 
     for t in count():
+        # Select and perform an action
         action = select_action(state)
 
         # gymnasium step()은 (obs, reward, terminated, truncated, info) 반환
@@ -224,6 +226,7 @@ for i_episode in range(num_episodes):
         done = terminated or truncated  # 두 조건 모두 종료로 처리
         reward = torch.tensor([reward], device=device)
 
+        # Observe new state
         last_screen = current_screen
         current_screen = get_screen()
         if not done:
@@ -231,16 +234,21 @@ for i_episode in range(num_episodes):
         else:
             next_state = None
 
+        # Store the transition in memory
         memory.push(state, action, next_state, reward)
+
+        # Move to the next state
         state = next_state
 
+        # Perform one step of optimization (on the policy network)
         optimize_model()
 
         if done:
             episode_durations.append(t + 1)
             plot_durations()
             break
-
+    
+    # Update the target network, copying all weights and biases in DQN
     if i_episode % TARGET_UPDATE == 0:
         target_net.load_state_dict(policy_net.state_dict())
 

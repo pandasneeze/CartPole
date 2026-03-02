@@ -158,7 +158,7 @@ n_actions = env.action_space.n
 actor = ActorNetwork(screen_height, screen_width, n_actions).to(device)
 critic = CriticNetwork(screen_height, screen_width).to(device)
 
-# α, β의 옵티마이저(Adam Optimizer)
+# α, β의 옵티마이저(RMSprop)
 actor_optimizer = optim.RMSprop(actor.parameters(), lr=ALPHA)
 critic_optimizer = optim.RMSprop(critic.parameters(), lr=BETA)
 
