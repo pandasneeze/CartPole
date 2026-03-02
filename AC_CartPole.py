@@ -144,7 +144,7 @@ class CriticNetwork(nn.Module):
 # ──────────────────────────────────────────────
 # 5. 하이퍼파라미터 & 모델 초기화
 # ──────────────────────────────────────────────
-GAMMA = 0.99          # Discount Factor
+GAMMA = 0.999          # Discount Factor
 ALPHA = 1e-4          # Actor 학습률 α
 BETA = 1e-3           # Critic 학습률 β
 NUM_EPISODES = 300
@@ -159,8 +159,8 @@ actor = ActorNetwork(screen_height, screen_width, n_actions).to(device)
 critic = CriticNetwork(screen_height, screen_width).to(device)
 
 # α, β의 옵티마이저(Adam Optimizer)
-actor_optimizer = optim.Adam(actor.parameters(), lr=ALPHA)
-critic_optimizer = optim.Adam(critic.parameters(), lr=BETA)
+actor_optimizer = optim.RMSprop(actor.parameters(), lr=ALPHA)
+critic_optimizer = optim.RMSprop(critic.parameters(), lr=BETA)
 
 
 # ──────────────────────────────────────────────
