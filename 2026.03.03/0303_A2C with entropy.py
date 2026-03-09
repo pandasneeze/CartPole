@@ -131,12 +131,12 @@ class CriticNetwork(nn.Module):
 # ──────────────────────────────────────────────
 # 5. 하이퍼파라미터 & 모델 초기화
 # ──────────────────────────────────────────────
-GAMMA         = 0.999   # Discount Factor
+GAMMA         = 0.98   # Discount Factor
 ALPHA         = 1e-4    # Actor 학습률 α
 BETA          = 1e-3    # Critic 학습률 β
 ENTROPY_COEF  = 0.01    # [추가] 엔트로피 보너스 계수 β_H
                         #        클수록 탐험 강화 / 작을수록 수렴 안정
-NUM_EPISODES  = 300
+NUM_EPISODES  = 2000
 
 # [추가] Advantage 정규화를 위한 running statistics (지수이동평균)
 # 단일 스텝 업데이트에서는 배치 정규화 대신 EMA로 분산을 추정
@@ -152,8 +152,8 @@ n_actions = env.action_space.n
 actor  = ActorNetwork(screen_height, screen_width, n_actions).to(device)
 critic = CriticNetwork(screen_height, screen_width).to(device)
 
-actor_optimizer  = optim.RMSprop(actor.parameters(),  lr=ALPHA)
-critic_optimizer = optim.RMSprop(critic.parameters(), lr=BETA)
+actor_optimizer  = optim.Adam(actor.parameters(),  lr=ALPHA)
+critic_optimizer = optim.Adam(critic.parameters(), lr=BETA)
 
 
 # ──────────────────────────────────────────────
@@ -252,24 +252,24 @@ def update(log_prob, entropy, advantage, v_s, td_target):
 # ──────────────────────────────────────────────
 # 10. 시각화
 # ──────────────────────────────────────────────
-episode_durations = []
+score_history = []
 entropy_history   = []  # [추가] 에피소드별 평균 엔트로피
 
 def plot_durations():
     fig = plt.figure(1, figsize=(11, 4))
     plt.clf()
 
-    # ── 왼쪽: Duration ──
+    # ── 왼쪽: Score ──
     ax1 = fig.add_subplot(1, 2, 1)
-    durations_t = torch.tensor(episode_durations, dtype=torch.float)
+    scores_t = torch.tensor(score_history, dtype=torch.float)
     ax1.set_title('A2C Training (+ Entropy Bonus)')
     ax1.set_xlabel('Episode')
-    ax1.set_ylabel('Duration')
-    ax1.plot(durations_t.numpy(), alpha=0.4, label='Duration')
-    if len(durations_t) >= 100:
-        means = durations_t.unfold(0, 100, 1).mean(1).view(-1)
+    ax1.set_ylabel('Score')                          # Duration → Score
+    ax1.plot(scores_t.numpy(), alpha=0.4, color='steelblue', label='Score')
+    if len(scores_t) >= 100:
+        means = scores_t.unfold(0, 100, 1).mean(1).view(-1)
         means = torch.cat((torch.zeros(99), means))
-        ax1.plot(means.numpy(), label='100-ep avg')
+        ax1.plot(means.numpy(), color='crimson', linewidth=2, label='100-ep avg')
     ax1.legend()
 
     # ── 오른쪽: Entropy — 탐험 정도 모니터링 ──
@@ -300,6 +300,7 @@ for i_episode in range(NUM_EPISODES):
     env.reset()
     state = get_screen() - get_screen()
     episode_entropy = []
+    episode_score = 0.0
 
     for t in count():
         # --- 행동 선택 (엔트로피 포함) ---
@@ -308,6 +309,7 @@ for i_episode in range(NUM_EPISODES):
         # --- 환경 진행 ---
         _, reward, terminated, truncated, _ = env.step(action.item())
         done   = terminated or truncated
+        episode_score += reward
         reward = torch.tensor([[reward]], dtype=torch.float32, device=device)
 
         # --- 다음 상태 ---
@@ -323,7 +325,7 @@ for i_episode in range(NUM_EPISODES):
         state = next_state
 
         if done:
-            episode_durations.append(t + 1)
+            score_history.append(episode_score)
             entropy_history.append(np.mean(episode_entropy))
             plot_durations()
             break

@@ -1,0 +1,32 @@
+# conda environment
+.env
+.venv
+env/
+venv/
+ml_env/
+conda-env/
+envs/
+
+# python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# jupyter
+.ipynb_checkpoints
+
+# vscode
+.vscode/
+
+# system
+.DS_Store
+Thumbs.db
+
+# build
+build/
+dist/
+*.egg-info/
+
+# logs
+*.log
