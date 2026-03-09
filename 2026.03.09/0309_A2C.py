@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 learning_rate = 0.0002
 gamma         = 0.99   # discount factor
 n_rollout     = 10     # batch size
-entropy_coef  = 0.01   
+entropy_coef  = 0.0   
 
 # ===== A2C =====
 class ActorCritic(nn.Module):  # DNN(MLP)
@@ -76,8 +76,7 @@ class ActorCritic(nn.Module):  # DNN(MLP)
         # feedback
         # Loss = L_actor + L_critic - βH(π)
         loss = -torch.log(pi_a) * advantage.detach() + \
-               F.smooth_l1_loss(self.v(s), td_target.detach()) - \
-               entropy_coef * entropy
+               F.smooth_l1_loss(self.v(s), td_target.detach())
 
         self.optimizer.zero_grad()
         loss.mean().backward()
@@ -132,45 +131,22 @@ def main():
     env.close()
 
     # ------ 그래프 ------
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
+    plt.figure(figsize=(7, 4))
 
-    # ── Score ──
-    ax1.plot(score_history, alpha=0.4, color='steelblue', label='Total Reward')
+    plt.plot(score_history, alpha=0.4, color='steelblue', label='Total Reward')
     window = 100
     if len(score_history) >= window:
         moving_avg = [
             np.mean(score_history[i - window:i])
             for i in range(window, len(score_history) + 1)
         ]
-        ax1.plot(range(window - 1, len(score_history)),
+        plt.plot(range(window - 1, len(score_history)),
                  moving_avg, color='crimson', linewidth=2,
                  label=f'{window}-Episode Moving Average')
-    ax1.set_xlabel('Episode')
-    ax1.set_ylabel('Total Reward')
-    ax1.set_title('A2C (with Entropy) CartPole-v1 Training')
-    ax1.legend()
-
-    # ── Entropy ──
-    ax2.plot(entropy_history, alpha=0.4, color='green', label='Entropy')
-    
-    window = 100
-    if len(entropy_history) >= window:
-        ent_moving_avg = [
-            np.mean(entropy_history[i - window:i])
-            for i in range(window, len(entropy_history) + 1)
-        ]
-        ax2.plot(range(window - 1, len(entropy_history)),
-                 ent_moving_avg, color='orange', linewidth=2,
-                 label=f'{window}-Episode Moving Average')
-    
-    max_entropy = np.log(2)
-    ax2.axhline(y=max_entropy, color='red', linestyle='--',
-                label=f'Max H = ln(2) ≈ {max_entropy:.3f}')
-    ax2.set_xlabel('Episode')
-    ax2.set_ylabel('Entropy')
-    ax2.set_title('Policy Entropy  H(π)')
-    ax2.legend()
-
+    plt.xlabel('Episode')
+    plt.ylabel('Total Reward')
+    plt.title('A2C (Pure) CartPole-v1 Training')
+    plt.legend()
     plt.tight_layout()
     plt.show()
 
