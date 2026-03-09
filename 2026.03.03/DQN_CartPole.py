@@ -151,21 +151,22 @@ def select_action(state):
                             device=device, dtype=torch.long)
 
 
-episode_durations = []
+score_history = []
 
 
-def plot_durations():
+def plot_scores():
     plt.figure(2)
     plt.clf()
-    durations_t = torch.tensor(episode_durations, dtype=torch.float)
+    scores_t = torch.tensor(score_history, dtype=torch.float)
     plt.title('DQN Training')
     plt.xlabel('Episode')
-    plt.ylabel('Duration')
-    plt.plot(durations_t.numpy())
-    if len(durations_t) >= 100:
-        means = durations_t.unfold(0, 100, 1).mean(1).view(-1)
+    plt.ylabel('Score')
+    plt.plot(scores_t.numpy())
+    if len(scores_t) >= 100:
+        means = scores_t.unfold(0, 100, 1).mean(1).view(-1)
         means = torch.cat((torch.zeros(99), means))
-        plt.plot(means.numpy())
+        plt.plot(means.numpy(), color='crimson', linewidth=2, label='100-ep avg')
+    plt.legend()
     plt.pause(0.001)
     if is_ipython:
         display.clear_output(wait=True)
@@ -208,7 +209,7 @@ def optimize_model():
     optimizer.step()
 
 # ----- 8. 메인 학습 루프 -----
-num_episodes = 300
+num_episodes = 1000
 for i_episode in range(num_episodes):
     # gymnasium reset()은 (observation, info) 반환
     # env, state 초기화
@@ -216,6 +217,7 @@ for i_episode in range(num_episodes):
     last_screen = get_screen()
     current_screen = get_screen()
     state = current_screen - last_screen
+    epi_score = 0.0
 
     for t in count():
         # Select and perform an action
@@ -224,6 +226,7 @@ for i_episode in range(num_episodes):
         # gymnasium step()은 (obs, reward, terminated, truncated, info) 반환
         _, reward, terminated, truncated, _ = env.step(action.item())
         done = terminated or truncated  # 두 조건 모두 종료로 처리
+        epi_score += reward
         reward = torch.tensor([reward], device=device)
 
         # Observe new state
@@ -244,8 +247,8 @@ for i_episode in range(num_episodes):
         optimize_model()
 
         if done:
-            episode_durations.append(t + 1)
-            plot_durations()
+            score_history.append(epi_score)
+            plot_scores()
             break
     
     # Update the target network, copying all weights and biases in DQN
